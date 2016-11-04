@@ -145,6 +145,7 @@ def make_extensions(options, compiler):
     if sys.platform == 'linux':
         args = settings.setdefault('extra_link_args', [])
         args.append('-nostdlib')
+        args.append('-fno-rtti')
     if sys.platform == 'darwin':
         args = settings.setdefault('extra_link_args', [])
         args.append(
