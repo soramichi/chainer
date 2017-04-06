@@ -42,9 +42,10 @@ def sig_handler(signum, stack):
     signal_caught = 1
 
 def inject_error(trainer):
-    global signal_caught
+    global signal_caught, model
     if signal_caught == 1:
         print("inject errors into the model")
+        print(model.predictor.l1.W.data)
     signal_caught = 0
 
 signal.signal(signal.SIGUSR2, sig_handler)
@@ -76,6 +77,7 @@ def main():
     # Set up a neural network to train
     # Classifier reports softmax cross entropy loss and accuracy at every
     # iteration, which will be used by the PrintReport extension below.
+    global model
     model = L.Classifier(MLP(args.unit, 10))
     if args.gpu >= 0:
         chainer.cuda.get_device(args.gpu).use()  # Make a specified GPU current
