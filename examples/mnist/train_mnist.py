@@ -9,6 +9,8 @@ except ImportError:
     pass
 
 import argparse
+import sys
+import numpy
 
 import chainer
 import chainer.functions as F
@@ -16,6 +18,26 @@ import chainer.links as L
 from chainer import training
 from chainer.training import extensions
 
+total_bytes_written = 0
+
+def get_size_in_byte(t):
+    if t == numpy.dtype('float64'):
+        return 8
+    elif t == numpy.dtype('float32'):
+        return 4
+    else:
+        sys.stderr.write("Unknown dtype: %s" % t)
+        return 0
+
+def get_total_size(bunch):
+    ans = get_size_in_byte(bunch.dtype)
+    cdr = bunch
+
+    for i in range(0, bunch.ndim):
+        ans *= cdr.shape[0]
+        cdr = bunch[0]
+
+    return ans
 
 # Network definition
 class MLP(chainer.Chain):
@@ -29,10 +51,18 @@ class MLP(chainer.Chain):
         )
 
     def __call__(self, x):
+        global total_bytes_written
+
         h1 = F.relu(self.l1(x))
         h2 = F.relu(self.l2(h1))
-        return self.l3(h2)
+        h3 = self.l3(h2)
 
+        s1 = get_total_size(h1)
+        s2 = get_total_size(h2)
+        s3 = get_total_size(h3)
+        total_bytes_written += (s1 + s2 + s3)
+
+        return h3
 
 def main():
     parser = argparse.ArgumentParser(description='Chainer example: MNIST')
@@ -116,6 +146,9 @@ def main():
 
     # Print a progress bar to stdout
     trainer.extend(extensions.ProgressBar())
+
+    # Print number of bytes written in an iteration
+    trainer.extend(lambda x: print(total_bytes_written), trigger=(1, 'epoch'))
 
     if args.resume:
         # Resume from a snapshot
