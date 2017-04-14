@@ -21,7 +21,7 @@ from chainer.training import extensions
 
 # global
 model = None
-error_rate = 1e-3
+error_rate = 0
 
 def inject_random_error(trainer):
     global model
@@ -86,13 +86,18 @@ def main():
                         help='Resume the training from snapshot')
     parser.add_argument('--unit', '-u', type=int, default=1000,
                         help='Number of units')
+    parser.add_argument('--error', '-E', type=float, default=0,
+                        help='Error rate')
     args = parser.parse_args()
 
     print('GPU: {}'.format(args.gpu))
     print('# unit: {}'.format(args.unit))
     print('# Minibatch-size: {}'.format(args.batchsize))
     print('# epoch: {}'.format(args.epoch))
+    print('Error rate: {}'.format(args.error))
     print('')
+
+    error_rate = args.error
 
     # Set up a neural network to train
     # Classifier reports softmax cross entropy loss and accuracy at every
