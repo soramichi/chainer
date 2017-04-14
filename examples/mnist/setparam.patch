@@ -1,0 +1,3 @@
+## link.py, Link(object)
+    def setparam(self, name, data):
+        self.__dict__[name].data = data

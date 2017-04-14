@@ -9,12 +9,50 @@ except ImportError:
     pass
 
 import argparse
+import numpy
+import math
+import random
 
 import chainer
 import chainer.functions as F
 import chainer.links as L
 from chainer import training
 from chainer.training import extensions
+
+# global
+model = None
+error_rate = 1e-3
+
+def inject_random_error(trainer):
+    global model
+
+    total_size = 0
+    total_len = 0
+    for p in model.predictor.params():
+        if p.name == "W":
+            total_size += p.data.size * 4 # assume float32
+            total_len += len(p.data)
+
+    errored_bits = int(math.ceil(total_size * 8 * error_rate))
+    target = numpy.random.permutation(total_len)[0:errored_bits]
+
+    for t in target:
+        len_so_far = 0
+        len_old = 0
+        for l in model.predictor._children:
+            for n, p in model.predictor.__dict__[l].namedparams():
+                if p.name == "W":
+                    len_so_far += len(p.data)
+                    if len_so_far > t:
+                        index = t - len_old
+                        # assume p.data is 2-dimensional
+                        # note: numpy is used with culumn-major mode in chainer?
+                        p.data[int(index / p.shape[1])][index % p.shape[1]] = random.random()
+                        break # for p
+                    else:
+                        len_old = len_so_far
+                    # because p is a copy, it needs to be written back
+                    model.predictor.__dict__[l].namedparams()
 
 
 # Network definition
@@ -59,6 +97,7 @@ def main():
     # Set up a neural network to train
     # Classifier reports softmax cross entropy loss and accuracy at every
     # iteration, which will be used by the PrintReport extension below.
+    global model
     model = L.Classifier(MLP(args.unit, 10))
     if args.gpu >= 0:
         chainer.cuda.get_device(args.gpu).use()  # Make a specified GPU current
@@ -93,14 +132,14 @@ def main():
     trainer.extend(extensions.LogReport())
 
     # Save two plot images to the result dir
-    if extensions.PlotReport.available():
-        trainer.extend(
-            extensions.PlotReport(['main/loss', 'validation/main/loss'],
-                                  'epoch', file_name='loss.png'))
-        trainer.extend(
-            extensions.PlotReport(
-                ['main/accuracy', 'validation/main/accuracy'],
-                'epoch', file_name='accuracy.png'))
+    """
+    trainer.extend(
+        extensions.PlotReport(['main/loss', 'validation/main/loss'], 'epoch',
+                              file_name='loss.png'))
+    trainer.extend(
+        extensions.PlotReport(['main/accuracy', 'validation/main/accuracy'],
+                              'epoch', file_name='accuracy.png'))
+    """
 
     # Print selected entries of the log to stdout
     # Here "main" refers to the target link of the "main" optimizer again, and
@@ -113,6 +152,8 @@ def main():
 
     # Print a progress bar to stdout
     trainer.extend(extensions.ProgressBar())
+
+    trainer.extend(inject_random_error, trigger=(1, 'iteration'))
 
     if args.resume:
         # Resume from a snapshot
