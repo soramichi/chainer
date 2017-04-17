@@ -1,0 +1,8 @@
+    def setparam(self, name, data):
+        pos = name.find("/")
+
+        if(pos != -1):
+            self.__dict__[name[0:pos]].setparam(name[pos+1:], data)
+        else:
+            self.__dict__[name].data = data
+
