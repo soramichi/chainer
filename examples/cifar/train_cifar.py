@@ -1,6 +1,11 @@
 from __future__ import print_function
 import argparse
 
+import math
+import numpy
+import random
+import functools
+
 import chainer
 import chainer.links as L
 from chainer import training
@@ -11,6 +16,80 @@ from chainer.datasets import get_cifar100
 
 import models.VGG
 
+model = None
+error_rate = 0
+
+def get_index(s, index):
+    if len(s) == 1:
+        return (int(index % s[0]), )
+    else:
+        tmp = functools.reduce(lambda a,b: a*b, s[1:], 1)
+        return (int(index / tmp), ) + get_index(s[1:], index % tmp)
+
+def inject_random_error(trainer):
+    global model, error_rate
+
+    total_size = 0
+    total_len = 0
+    for l in model.predictor._children:
+        for n, p in model.predictor.__dict__[l].namedparams():
+            if p.name == "W":
+                total_size += p.data.size * 4 # assume float32
+                total_len += len(p.data)
+
+    errored_bits = int(math.ceil(total_size * 8 * error_rate))
+    target = numpy.sort(numpy.random.permutation(total_len)[0:errored_bits])
+
+
+    """
+    # to ensure that the paremeters are really changed in the model
+    for l in model.predictor._children:
+        for n, p in model.predictor.__dict__[l].namedparams():                
+            if p.name == "W":
+                model.predictor.__dict__[l].setparam(n[1:], chainer.cuda.cupy.zeros(p.data.shape, order='C', dtype=chainer.cuda.cupy.float32))
+    """
+
+    len_so_far = 0
+    len_old = 0
+    t = 0
+    for l in model.predictor._children:
+        for n, p in model.predictor.__dict__[l].namedparams():                
+            if p.name == "W":
+                modified = False
+                len_old = len_so_far
+                len_so_far += len(p.data)
+                W = chainer.cuda.to_cpu(p.data)
+
+                # target must be sorted
+                while t < len(target) and target[t] <= len_so_far:
+                    t += 1
+                    index = t - len_old
+                    #p.data[get_index(p.data.shape, index)] = random.random()
+                    W[get_index(W.shape, index)] = random.random()
+                    modified = True
+  
+                # because p is a copy, it needs to be written back
+                if modified:
+                    model.predictor.__dict__[l].setparam(n[1:], chainer.cuda.to_gpu(W))
+
+    """
+    for t in target:
+        len_so_far = 0
+        len_old = 0
+        for l in model.predictor._children:
+            for n, p in model.predictor.__dict__[l].namedparams():                
+                if p.name == "W":
+                    len_so_far += len(p.data)
+                    if len_so_far > t:
+                        index = t - len_old
+                        p.data[get_index(p.data.shape, index)] = random.random()
+
+                        # because p is a copy, it needs to be written back
+                        model.predictor.__dict__[l].setparam(n[1:], p.data)
+                        break # for p
+                    else:
+                        len_old = len_so_far
+    """
 
 def main():
     parser = argparse.ArgumentParser(description='Chainer CIFAR example:')
@@ -26,12 +105,18 @@ def main():
                         help='Directory to output the result')
     parser.add_argument('--resume', '-r', default='',
                         help='Resume the training from snapshot')
+    parser.add_argument('--error', '-E', type=float, default=0,
+                        help='Error rate')
     args = parser.parse_args()
 
     print('GPU: {}'.format(args.gpu))
     print('# Minibatch-size: {}'.format(args.batchsize))
     print('# epoch: {}'.format(args.epoch))
+    print('Error rate: {}'.format(args.error))
     print('')
+
+    global error_rate
+    error_rate = args.error
 
     # Set up a neural network to train.
     # Classifier reports softmax cross entropy loss and accuracy at every
@@ -46,6 +131,7 @@ def main():
         train, test = get_cifar100()
     else:
         raise RuntimeError('Invalid dataset choice.')
+    global model
     model = L.Classifier(models.VGG.VGG(class_labels))
     if args.gpu >= 0:
         chainer.cuda.get_device(args.gpu).use()  # Make a specified GPU current
@@ -90,6 +176,8 @@ def main():
 
     # Print a progress bar to stdout
     trainer.extend(extensions.ProgressBar())
+
+    trainer.extend(inject_random_error, trigger=(1, 'iteration'))
 
     if args.resume:
         # Resume from a snapshot
