@@ -24,7 +24,7 @@ model = None
 error_rate = 0
 
 def inject_random_error(trainer):
-    global model
+    global model, error_rate
 
     total_size = 0
     total_len = 0
@@ -51,8 +51,8 @@ def inject_random_error(trainer):
                         break # for p
                     else:
                         len_old = len_so_far
-                    # because p is a copy, it needs to be written back
-                    model.predictor.__dict__[l].namedparams()
+                # because p is a copy, it needs to be written back
+                model.predictor.__dict__[l].setparam(p.name, p.data)
 
 
 # Network definition
@@ -97,6 +97,7 @@ def main():
     print('Error rate: {}'.format(args.error))
     print('')
 
+    global error_rate
     error_rate = args.error
 
     # Set up a neural network to train
