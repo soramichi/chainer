@@ -35,11 +35,12 @@ def inject_random_error(trainer):
         for n, p in model.predictor.__dict__[l].namedparams():
             if p.name == "W":
                 total_size += p.data.size * 4 # assume float32
-                total_len += len(p.data)
+                total_len += p.data.size
 
+    #print(total_size, total_len)
     errored_bits = int(math.ceil(total_size * 8 * error_rate))
     target = numpy.sort(numpy.random.permutation(total_len)[0:errored_bits])
-
+    #print(target)
 
     """
     # to ensure that the paremeters are really changed in the model
@@ -57,16 +58,15 @@ def inject_random_error(trainer):
             if p.name == "W":
                 modified = False
                 len_old = len_so_far
-                len_so_far += len(p.data)
+                len_so_far += p.data.size
                 W = chainer.cuda.to_cpu(p.data)
 
                 # target must be sorted
-                while t < len(target) and target[t] <= len_so_far:
-                    t += 1
-                    index = t - len_old
-                    #p.data[get_index(p.data.shape, index)] = random.random()
+                while t < len(target) and target[t] < len_so_far:
+                    index = target[t] - len_old
                     W[get_index(W.shape, index)] = random.random()
                     modified = True
+                    t += 1
   
                 # because p is a copy, it needs to be written back
                 if modified:
