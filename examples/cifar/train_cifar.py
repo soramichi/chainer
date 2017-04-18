@@ -72,25 +72,6 @@ def inject_random_error(trainer):
                 if modified:
                     model.predictor.__dict__[l].setparam(n[1:], chainer.cuda.to_gpu(W))
 
-    """
-    for t in target:
-        len_so_far = 0
-        len_old = 0
-        for l in model.predictor._children:
-            for n, p in model.predictor.__dict__[l].namedparams():                
-                if p.name == "W":
-                    len_so_far += len(p.data)
-                    if len_so_far > t:
-                        index = t - len_old
-                        p.data[get_index(p.data.shape, index)] = random.random()
-
-                        # because p is a copy, it needs to be written back
-                        model.predictor.__dict__[l].setparam(n[1:], p.data)
-                        break # for p
-                    else:
-                        len_old = len_so_far
-    """
-
 def main():
     parser = argparse.ArgumentParser(description='Chainer CIFAR example:')
     parser.add_argument('--dataset', '-d', default='cifar10',
