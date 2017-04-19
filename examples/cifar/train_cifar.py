@@ -18,6 +18,8 @@ import models.VGG
 
 model = None
 error_rate = 0
+epoch = 0
+error_rate_increased = False
 
 def get_index(s, index):
     if len(s) == 1:
@@ -26,8 +28,16 @@ def get_index(s, index):
         tmp = functools.reduce(lambda a,b: a*b, s[1:], 1)
         return (int(index / tmp), ) + get_index(s[1:], index % tmp)
 
+def count_epoch(trainer):
+    global epoch
+    epoch += 1
+
 def inject_random_error(trainer):
-    global model, error_rate
+    global model, error_rate, epoch, error_rate_increased
+
+    if(epoch == 30 and not error_rate_increased):
+        error_rate /= 10.0
+        error_rate_increased = True
 
     total_size = 0
     total_len = 0
@@ -159,6 +169,8 @@ def main():
     trainer.extend(extensions.ProgressBar())
 
     trainer.extend(inject_random_error, trigger=(1, 'iteration'))
+
+    trainer.extend(count_epoch, trigger=(1, 'epoch'))
 
     if args.resume:
         # Resume from a snapshot
