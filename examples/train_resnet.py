@@ -6,12 +6,12 @@ import numpy as np
 
 from chainer import cuda, optimizers, serializers
 from chainer import Variable
-from resnet152 import ResNet152
+from resnet152_ooc import ResNet152_OOC
 
 use_cupy = True
 xp = cuda.cupy if use_cupy else np
 
-model = ResNet152()
+model = ResNet152_OOC()
 opt = optimizers.SGD()
 opt.setup(model)
 nbatch = 20
