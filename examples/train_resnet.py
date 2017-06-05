@@ -14,8 +14,8 @@ xp = cuda.cupy if use_cupy else np
 model = ResNet152_OOC()
 opt = optimizers.SGD()
 opt.setup(model)
-nbatch = 20
-num_loop = 10
+nbatch = 40
+num_loop = 15
 
 # set up random data
 x = xp.random.uniform(-1, 1, (nbatch, 3, 224, 224)).astype(xp.float32)
