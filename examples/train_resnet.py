@@ -3,7 +3,6 @@ import numpy
 import time
 
 import numpy as np
-import cupy.cuda.runtime as runtime
 
 from chainer import cuda, optimizers, serializers
 from chainer import Variable
@@ -22,7 +21,6 @@ num_loop = 10
 x = xp.random.uniform(-1, 1, (nbatch, 3, 224, 224)).astype(xp.float32)
 x = Variable(xp.asarray(x))
 label = xp.zeros((nbatch), dtype=xp.int32)
-
 for i in range(0, len(label)):
     label[i] = i % 1000
 label = Variable(xp.asarray(label))
