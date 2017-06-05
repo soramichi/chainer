@@ -94,7 +94,6 @@ class ResNet152(chainer.Chain):
 
         if self.train:
             loss = F.softmax_cross_entropy(h, t)
-            chainer.report({'loss': loss, 'accuracy': F.accuracy(h, t)}, self)
             return loss
         else:
             return h
