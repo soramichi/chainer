@@ -14,7 +14,6 @@ class BottleNeckA(chainer.Chain):
             conv2=L.Convolution2D(ch, ch, 3, 1, 1, w, nobias=True),
             bn3=L.BatchNormalization(ch),
             conv3=L.Convolution2D(ch, out_size, 1, 1, 0, w, nobias=True),
-
             bn4=L.BatchNormalization(in_size),
             conv4=L.Convolution2D(in_size, out_size, 1, stride, 0, w, nobias=True),
         )
@@ -23,7 +22,6 @@ class BottleNeckA(chainer.Chain):
         h1 = self.conv1(F.relu(self.bn1(x, test=not train)))
         h1 = self.conv2(F.relu(self.bn2(h1, test=not train)))
         h1 = self.conv3(F.relu(self.bn3(h1, test=not train)))
-
         h2 = self.conv4(F.relu(self.bn4(x, test=not train)))
 
         return h1 + h2
