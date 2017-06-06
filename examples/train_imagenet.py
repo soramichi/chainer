@@ -34,6 +34,12 @@ elif args.arch == 'vgga':
 elif args.arch == 'overfeat':
     import overfeat
     model = overfeat.overfeat()
+elif args.arch == 'resnet':
+    import resnet152
+    model = resnet152.ResNet152()
+elif args.arch == 'resnet_ooc':
+    import resnet152_ooc
+    model = resnet152_ooc.ResNet152_OOC()
 else:
     raise ValueError('Invalid architecture name')
 
@@ -66,7 +72,7 @@ def train_loop():
         start = xp.cuda.Event()
         end = xp.cuda.Event()
         start.record()
-        loss, accuracy = model.forward(x, y)
+        loss = model(x, y)
         end.record()
         end.synchronize()
         time_ = xp.cuda.get_elapsed_time(start, end)
@@ -97,7 +103,7 @@ def train_loop():
             total_backward += time_
         # print "Optimizer update time elapsed:", time_, " ms"
 
-        del loss, accuracy
+        del loss
     print "Average Forward:  ", total_forward  / (niter-1), " ms"
     print "Average Backward: ", total_backward / (niter-1), " ms"
     print "Average Total:    ", (total_forward + total_backward) / (niter-1), " ms"
